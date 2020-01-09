@@ -72,8 +72,16 @@ public class PersonRepository implements Repository {
      */
     @Override
     public Person save(Person newPerson) {
+        if (newPerson.getId() != null) {
+            if (update(newPerson) != 1) {
+                System.err.println("Failed updating Person");
+                return null;
+            }
 
-        return null;
+            return newPerson;
+        }
+
+        return insert(newPerson);
     }
 
     /**
@@ -84,6 +92,34 @@ public class PersonRepository implements Repository {
      * @return Rückgabe der Person inklusive der neu generierten ID
      */
     private Person insert(Person personToSave) {
+        try (Connection conn = DriverManager.getConnection(URL, USERNAME, PASSWORD)) {
+            String sql = "INSERT INTO " + TABLE_NAME + " (name, city, house) " +
+                    "VALUES (?, ?, ?)";
+
+            try (PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+                stmt.setString(1, personToSave.getName());
+                stmt.setString(2, personToSave.getCity());
+                stmt.setString(3, personToSave.getHouse());
+
+
+                if (stmt.executeUpdate() == 0) {
+                    System.err.println("No rows affected");
+                    return null;
+                }
+
+                try (ResultSet generatedKeys = stmt.getGeneratedKeys()) {
+                    if (generatedKeys.next()) {
+                        personToSave.setId(generatedKeys.getLong(1));
+                    } else {
+                        System.err.println("No ID obtained");
+                    }
+                }
+
+                return personToSave;
+            }
+        } catch (SQLException e) {
+            System.err.println(e.getMessage());
+        }
 
         return null;
     }
@@ -95,6 +131,22 @@ public class PersonRepository implements Repository {
      *         wenn nicht erfolgreich --> -1
      */
     private int update(Person personToSave) {
+        try (Connection conn = DriverManager.getConnection(URL, USERNAME, PASSWORD)) {
+            try (Statement stmt = conn.createStatement()) {
+                String sql = "UPDATE " + TABLE_NAME +
+                        " SET name = '" + personToSave.getName() + "', city = '" + personToSave.getCity() + "', house = '" + personToSave.getHouse() +"'" +
+                        " WHERE id = " + personToSave.getId();
+
+                if (stmt.executeUpdate(sql) == 0) {
+                    System.err.println("No rows affected");
+                    return -1;
+                }
+
+                return 1;
+            }
+        } catch (SQLException e) {
+            System.err.println(e.getMessage());
+        }
 
         return -1;
     }
