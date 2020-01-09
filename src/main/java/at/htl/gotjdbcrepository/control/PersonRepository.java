@@ -3,6 +3,7 @@ package at.htl.gotjdbcrepository.control;
 import at.htl.gotjdbcrepository.entity.Person;
 
 import java.sql.*;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -161,6 +162,20 @@ public class PersonRepository implements Repository {
      * @return die gefundene Person oder wenn nicht gefunden wird null zurückgegeben
      */
     public Person find(long id) {
+        try (Connection conn = DriverManager.getConnection(URL, USERNAME, PASSWORD)) {
+            try (Statement stmt = conn.createStatement()) {
+                String sql = "SELECT * FROM " + TABLE_NAME + " WHERE id=" + id;
+                ResultSet resultSet = stmt.executeQuery(sql);
+
+                if (resultSet.next()) {
+                    Person person = new Person(resultSet.getString("name"), resultSet.getString("city"), resultSet.getString("house"));
+                    person.setId(resultSet.getLong("id"));
+                    return person;
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println(e.getMessage());
+        }
 
         return null;
     }
@@ -171,6 +186,24 @@ public class PersonRepository implements Repository {
      * @return Liste aller Personen des gegebenen Hauses
      */
     public List<Person> findByHouse(String house) {
+        try (Connection conn = DriverManager.getConnection(URL, USERNAME, PASSWORD)) {
+            try (Statement stmt = conn.createStatement()) {
+                String sql = "SELECT * FROM " + TABLE_NAME + " WHERE house='" + house + "'";
+                ResultSet resultSet = stmt.executeQuery(sql);
+
+                List<Person> people = new ArrayList<>();
+
+                while (resultSet.next()) {
+                    Person person = new Person(resultSet.getString("name"), resultSet.getString("city"), resultSet.getString("house"));
+                    person.setId(resultSet.getLong("id"));
+                    people.add(person);
+                }
+
+                return people;
+            }
+        } catch (SQLException e) {
+            System.err.println(e.getMessage());
+        }
 
         return null;
     }
